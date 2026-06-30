@@ -21,22 +21,43 @@ As partes que compões este projeto são descritas como:
 
 ## Requerimentos
 
-- Python 3.12
-- conda ou miniconda
+- Python 3.12 ou superior
 
 ## Instalação
 
 1. Clone o repositório:
    ```bash
-   git clone https://github.com/edppf/pseudo-os
-   cd pseudo-os
+   git clone https://github.com/edppf/pseudo-so
+   cd pseudo-so
    ```
 
-2. Crie e ative o ambiente conda:
-   ```bash
-   conda env create -f environment.yml
-   conda activate pseudo-os
-   ```
+Crie um ambiente virtual:
+
+```bash
+python -m venv .venv
+```
+
+Ative o ambiente virtual:
+
+- WINDOWS:
+```bash
+.venv\Scripts\Activate.ps1
+```
+
+> Pode ser necessario rodar o seguinte comando, que as vezes é executado automaticamente pelo terminal integrado do VS Code:
+> 
+> `(Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; (& <caminho_para_o_projeto>\pseudo-so\.venv\Scripts\Activate.ps1)`
+
+- Linux/MacOS:
+```
+source venv/bin/activate
+```
+
+Instale as dependências:
+
+```bash
+pip install -r requirements.txt
+```
 
 ## Uso
 
@@ -76,7 +97,7 @@ A pasta `tests/` possui:
 ## Estrutura do projeto
 
 ```
-pseudo-os/
+pseudo-so/
 ├── src/
 │   ├── dispatcher.py          # Main process dispatcher
 │   ├── os_simulation.py       # Simulation entry point
