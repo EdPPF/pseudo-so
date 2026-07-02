@@ -42,7 +42,7 @@ class FileSystem:
             return False
 
         self._occupy(start, size)
-        self.files[filename] = FileEntry(filename, start, size, owner_pid=0 if is_real_time else pid)
+        self.files[filename] = FileEntry(filename, start, size, owner_pid=pid)
         return True
 
     def delete(self, pid: int, is_real_time: bool, filename: str) -> bool:
