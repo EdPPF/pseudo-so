@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Optional
 
 
 class ProcessState(Enum):
@@ -28,7 +27,7 @@ class Process:
     arrival_time: int  # Time when process enters the system (ms)
     priority: int  # 0: real-time, 1-3: user processes
     cpu_time: int  # Total CPU time required to complete (ms)
-    memory_blocks: int  # Amount of contiguous memory blocks needed
+    memory_blocks: int  # Maximum working-set size in frames
     ## I/O resource requirements
     printers: int
     scanners: int
@@ -43,6 +42,7 @@ class Process:
     current_queue_level: int = field(init=False)  # Dynamic priority 1-3 for user processes
     waited_time: int = field(init=False, default=0)  # Time waiting in ready queues (for aging)
     instructions_executed: int = field(init=False, default=0)  # Track progress
+    started: bool = field(init=False, default=False)  # True after first CPU dispatch
 
     def __post_init__(self) -> None:
         """Initialize computed fields after dataclass creation."""

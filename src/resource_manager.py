@@ -62,6 +62,9 @@ class ResourceManager:
         Returns:
             True if all requested devices were allocated, False otherwise
         """
+        if min(printers, scanners, modems, sata) < 0:
+            return False
+
         # Check if enough resources are available
         if (
             printers > self.available.printers
@@ -92,10 +95,21 @@ class ResourceManager:
             modems: Number of modems to release
             sata: Number of SATA devices to release
         """
+        if min(printers, scanners, modems, sata) < 0:
+            raise ValueError("Resource counts cannot be negative")
+
         self.available.printers += printers
         self.available.scanners += scanners
         self.available.modems += modems
         self.available.sata += sata
+
+        if (
+            self.available.printers > self.TOTAL_PRINTERS
+            or self.available.scanners > self.TOTAL_SCANNERS
+            or self.available.modems > self.TOTAL_MODEMS
+            or self.available.sata > self.TOTAL_SATA
+        ):
+            raise RuntimeError("Resource pool exceeded total device count")
 
     def __str__(self) -> str:
         """String representation showing available resource counts."""

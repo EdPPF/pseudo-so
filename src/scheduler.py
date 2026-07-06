@@ -119,12 +119,12 @@ class Scheduler:
         if self.current:
             self.current.state = ProcessState.RUNNING
             self.current.waited_time = 0  # Reset wait time when scheduled
-            self._print_dispatch(self.current)
+            if not self.current.started:
+                self._print_dispatch(self.current)
             print(f"process {self.current.pid} =>")
-            # Print start message for newly started processes
-            if hasattr(self.current, "_just_started"):
+            if not self.current.started:
                 print(f"    P{self.current.pid} STARTED")
-                delattr(self.current, "_just_started")
+                self.current.started = True
         return self.current
 
     def tick(self) -> None:
@@ -188,16 +188,12 @@ class Scheduler:
 
     @staticmethod
     def _print_dispatch(proc: Process) -> None:
-        """Print dispatcher information when process is selected for execution.
-
-        Args:
-            proc: Process being dispatched
-        """
+        """Print dispatcher information when process is selected for execution."""
         print("dispatcher =>")
         print(f"    PID: {proc.pid}")
         print(f"    frames: {proc.memory_blocks}")
         print(f"    priority: {proc.priority}")
-        print(f"    time: {proc.remaining_time}")
+        print(f"    time: {proc.cpu_time}")
         print(f"    printers: {proc.printers}")
         print(f"    scanners: {proc.scanners}")
         print(f"    modems: {proc.modems}")

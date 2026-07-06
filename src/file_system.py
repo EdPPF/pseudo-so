@@ -7,7 +7,7 @@ class FileEntry:
     filename: str
     start: int
     size: int
-    owner_pid: int # 0 para system files
+    owner_pid: int # -1 para arquivos preexistentes, sem dono de usuario
 
     def __str__(self) -> str:
         """String que representa a alocação do arquivo."""
@@ -28,10 +28,14 @@ class FileSystem:
     def load_existing(self, entries: List[Tuple[str, int, int]]) -> None:
         """Carrega arquivos existentes no sistema de arquivos."""
         for name, start, size in entries:
+            if name in self.files:
+                raise RuntimeError(f"Arquivo existente duplicado: {name}")
+            if start < 0 or size <= 0 or start + size > self.total_blocks:
+                raise RuntimeError(f"Segmento invalido para o arquivo existente {name}")
             if not self._is_space_available(start, size):
                 raise RuntimeError(f"Espaço insuficiente para carregar o arquivo existente {name}\nEm: {start}")
             self._occupy(start, size)
-            self.files[name] = FileEntry(name, start, size, owner_pid=0)
+            self.files[name] = FileEntry(name, start, size, owner_pid=-1)
 
     def create(self, pid: int, is_real_time: bool, filename: str, size: int) -> bool:
         if size <= 0 or filename in self.files:
