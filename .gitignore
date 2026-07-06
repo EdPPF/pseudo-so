@@ -1,4 +1,6 @@
 .explain.txt
+# Exclui os testes por enquanto
+tests/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

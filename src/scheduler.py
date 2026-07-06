@@ -64,26 +64,22 @@ class Scheduler:
         self.admission = pending
 
     def _allocate_resources(self, proc: Process) -> bool:
-        """Attempt to allocate memory and I/O resources for a process.
-
-        Args:
-            proc: Process requesting resources
-
-        Returns:
-            True if all resources allocated successfully, False otherwise
-        """
-        # Allocate memory first
-        offset = self.memory.allocate(proc.memory_blocks, proc.is_real_time)
-        if offset is None:
+        """Attempt to allocate memory frames and I/O resources for a process."""
+        # Allocate memory
+        page_table = self.memory.admit_process(proc.pid, proc.is_real_time, proc.memory_blocks)
+        if not page_table:
             return False
-        # Real-time processes don't need I/O resources
+        
+        # Allocate I/O resources
         if not proc.is_real_time and not self.resources.allocate(
             proc.printers, proc.scanners, proc.modems, proc.sata
         ):
             # Rollback memory allocation if I/O allocation fails
-            self.memory.free(offset, proc.memory_blocks, proc.is_real_time)
+            self.memory.release_process(proc.pid)
             return False
-        proc.memory_offset = offset
+        
+        # LRU: sem tempo extra
+        proc.page_faults = page_table.process_reference_string(proc.reference_string)
         return True
 
     def _enqueue_ready(self, proc: Process) -> None:
@@ -181,15 +177,11 @@ class Scheduler:
                 self.current = None
 
     def _terminate_process(self, proc: Process) -> None:
-        """Clean up resources when process terminates.
-
-        Args:
-            proc: Process to terminate
-        """
+        """Clean up resources when process terminates."""
         proc.state = ProcessState.TERMINATED
 
-        # Release memory for all processes
-        self.memory.free(proc.memory_offset or 0, proc.memory_blocks, proc.is_real_time)
+        # Release memory frames
+        self.memory.release_process(proc.pid)
         # Release resources (user processes only)
         if not proc.is_real_time:
             self.resources.free(proc.printers, proc.scanners, proc.modems, proc.sata)

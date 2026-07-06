@@ -23,27 +23,25 @@ class Process:
     scheduling information, and runtime state.
     """
 
-    # Static process attributes from input file
+    ## Static process attributes from input file
     pid: int
     arrival_time: int  # Time when process enters the system (ms)
     priority: int  # 0: real-time, 1-3: user processes
     cpu_time: int  # Total CPU time required to complete (ms)
     memory_blocks: int  # Amount of contiguous memory blocks needed
-    # I/O resource requirements
+    ## I/O resource requirements
     printers: int
     scanners: int
     modems: int
     sata: int
-    # Runtime state - managed by the OS during execution
+    ## String de referência atrelada ao processo
+    reference_string: list[int] = field(default_factory=list)
+    page_faults: int = field(init=False, default=0)  # Track page faults during execution
+    ## Runtime state - managed by the OS during execution
     remaining_time: int = field(init=False)  # CPU time left to execute
-    memory_offset: Optional[int] = None  # Start address when allocated
     state: ProcessState = field(init=False, default=ProcessState.NEW)
-    current_queue_level: int = field(
-        init=False
-    )  # Dynamic priority 1-3 for user processes
-    waited_time: int = field(
-        init=False, default=0
-    )  # Time waiting in ready queues (for aging)
+    current_queue_level: int = field(init=False)  # Dynamic priority 1-3 for user processes
+    waited_time: int = field(init=False, default=0)  # Time waiting in ready queues (for aging)
     instructions_executed: int = field(init=False, default=0)  # Track progress
 
     def __post_init__(self) -> None:

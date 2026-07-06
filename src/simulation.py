@@ -213,41 +213,6 @@ def _run_filesystem_operations(
                 print(f"    O processo {pid} não pode deletar o arquivo {filename} porque não é o proprietário.")
 
 
-def _simulate_page_faults(processes: List[Process], references: List[List[int]]) -> List[int]:
-    if len(references) != len(processes):
-        raise ValueError("string.txt deve ter uma linha de referência para cada processo.")
-
-    faults: List[int] = []
-    for process, sequence in zip(processes, references):
-        partition_capacity = 8 if process.is_real_time else 12
-        capacity = max(1, min(process.memory_blocks, partition_capacity))
-        if not sequence:
-            faults.append(0)
-            continue
-
-        frames = [sequence[0]]
-        last_used = {sequence[0]: 0}
-        page_faults = 0
-
-        for tick, page in enumerate(sequence[1:], start=1):
-            if page in frames:
-                last_used[page] = tick
-                continue
-
-            page_faults += 1
-            if len(frames) >= capacity:
-                lru_page = min(frames, key=lambda candidate: last_used.get(candidate, -1))
-                frames.remove(lru_page)
-                last_used.pop(lru_page, None)
-
-            frames.append(page)
-            last_used[page] = tick
-
-        faults.append(page_faults)
-
-    return faults
-
-
 def run_simulation(procs: Path, files: Path, strings: Optional[Path] = None) -> None:
     """Executa a simulação do pseudo-SO na ordem esperada pela especificação."""
     strings = strings or Path("string.txt")
@@ -256,13 +221,18 @@ def run_simulation(procs: Path, files: Path, strings: Optional[Path] = None) -> 
     fs, operations = parse_files(files)
     reference_strings = parse_reference_strings(strings)
 
+    # Associa string de referencia direto ao seu respectivo processo
+    for process, sequence in zip(processes, reference_strings):
+        process.reference_string = sequence
+
+    # Escalonador processa o LRU na admissão
     _drive_process_execution(processes)
+    # Roda operações do sistema de arquivos após encerramento da CPU
     _run_filesystem_operations(processes, fs, operations)
 
     print("Mapa de ocupação do disco:")
     fs.dump()
 
-    page_faults = _simulate_page_faults(processes, reference_strings)
     print("Número de Faltas de Páginas por processo:")
-    for process, faults in zip(processes, page_faults):
-        print(f"P{process.pid} = {faults} faltas de páginas")
+    for process in processes:
+        print(f"P{process.pid} = {process.page_faults} faltas de páginas")
