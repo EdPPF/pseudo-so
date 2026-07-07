@@ -99,12 +99,11 @@ class Scheduler:
 
 
     def tick(self) -> None:                             # Simula 1 ms de execução da CPU e realiza as operações de escalonamento
-
         ## Tenta admitir novos processos que estavam aguardando memória ou recursos
         self.try_admit()
 
         ## Aplica o mecanismo de aging aos processos nas filas de usuário
-        for lvl, q in enumerate(self.user_queues):
+        for _, q in enumerate(self.user_queues):
             for _ in range(len(q)):                     # Percorre todos os processos da fila atual
                 proc = q.popleft()                      # Remove temporariamente o processo da fila
                 proc.waited_time += 1                   # Incrementa o tempo de espera do processo
@@ -120,7 +119,6 @@ class Scheduler:
             return
         
         ## Executa o processo durante um quantum de tempo
-        
         if proc.is_real_time:  
             # Processos de tempo real não sofrem preempção                     
             proc.remaining_time -= 1

@@ -78,14 +78,23 @@ python -m src tests/default/processes.txt tests/default/files.txt tests/default/
 
 ## Estrutura do projeto
 
-TODO
+```
+Directory structure:
+└── ./
+    ├── README.md
+    ├── requirements.txt
+    ├── src/
+    │   ├── __init__.py
+    │   ├── __main__.py
+    │   ├── file_system.py
+    │   ├── memory_manager.py
+    │   ├── process.py
+    │   ├── resource_manager.py
+    │   ├── scheduler.py
+    │   └── simulation.py
+    └── tests/
+```
 
 ## Formatos dos arquivos de entrada
 
 TODO
-
-## License
-
-PENDING
-
-> This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

@@ -9,16 +9,10 @@ from .simulation import run_simulation
 
 
 def _resolve_cli_paths(argv: Sequence[str]) -> Tuple[Path, Path, Path]:
-    if argv and all(not arg.startswith("-") for arg in argv):
-        if len(argv) != 3:
-            raise SystemExit("Uso: python -m src <processes.txt> <files.txt> <string.txt>")
-        return (
-            Path(argv[0]),
-            Path(argv[1]),
-            Path(argv[2]),
-        )
-
-    parser = argparse.ArgumentParser(description="Pseudo-SO")
+    parser = argparse.ArgumentParser(
+        description="Pseudo-SO",
+        epilog="Uso: python -m src <processes.txt> <files.txt> <string.txt>"
+    )
     parser.add_argument(
         "processes",
         type=Path,

@@ -1,11 +1,11 @@
-"""Process Control Block (PCB) implementation for OS simulation."""
+"""Process Control Block (PCB). Definição de dados - define a estrutura de um processo."""
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
 
 
 class ProcessState(Enum):       
-    ## Estados do processo
+    """Define os estados de um processo."""
     NEW = auto()                # Processo criado
     READY = auto()              # Processo pronto, aguardando a CPU
     RUNNING = auto()            # Processo em execução na CPU
@@ -21,7 +21,7 @@ class Process:
     arrival_time: int           # Instante em que o processo entra no sistema (ms)
     priority: int               # Prioridade (0: tempo real, 1-3: processos de usuário)
     cpu_time: int               # Tempo total de CPU necessário para concluir (ms)
-    memory_blocks: int          # Quantidade de blocos contíguos de memória necessários
+    memory_blocks: int          # Quantidade de blocos memória necessários
     
     ## Recursos de entrada e saída (E/S)
     printers: int               # Quantidade de impressoras solicitadas

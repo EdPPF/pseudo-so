@@ -3,23 +3,6 @@
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
-
-
-# @dataclass
-# class MemorySegment:
-#     """Represents a contiguous block of memory."""
-
-#     start: int  # Starting block address
-#     size: int  # Size in blocks
-
-#     @property
-#     def end(self) -> int:
-#         """Get the last block address of this segment.
-
-#         Returns:
-#             Last block address (inclusive)
-#         """
-#         return self.start + self.size - 1
     
 
 @dataclass
@@ -53,7 +36,7 @@ class ProcessPageTable:
         return self.page_faults
 
 
-# Para evitar problemas de alocação por conta de fragmentação interna, usamos contadores Contadores de blocos livres para cada área.
+# Para evitar problemas de alocação por conta de fragmentação interna, usamos contadores contadores de blocos livres para cada área.
 class MemoryManager:
     """Manages memory allocation with strict separation for real-time and user processes."""
 
