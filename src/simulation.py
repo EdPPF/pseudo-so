@@ -1,5 +1,3 @@
-"""Módulo principal que orquestra scheduling dos processos e operações do file system."""
-
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -12,7 +10,7 @@ from .scheduler import Scheduler
 
 MAX_PROCESSES = 1000
 
-
+## Cria um objeto Process a partir dos dados lidos do arquivo
 def _build_process(
     pid: int,
     arrival: int,
@@ -24,6 +22,8 @@ def _build_process(
     modem: int,
     sata: int,
 ) -> Process:
+    
+    # Inicializa o PCB do processo
     return Process(
         pid=pid,
         arrival_time=arrival,
@@ -36,7 +36,7 @@ def _build_process(
         sata=sata,
     )
 
-
+## Valida se os dados de entrada de um processo são permitidos
 def _validate_process_fields(
     line_number: int,
     priority: int,
@@ -48,28 +48,30 @@ def _validate_process_fields(
     modem: int,
     sata: int,
 ) -> None:
-    if priority not in (0, 1, 2, 3):
+    if priority not in (0, 1, 2, 3):    # Verifica se a prioridade é válida
         raise ValueError(f"Linha {line_number}: prioridade deve estar entre 0 e 3")
-    if arrival < 0:
+    if arrival < 0:                     # Tempo de chegada não pode ser negativo
         raise ValueError(f"Linha {line_number}: tempo de inicializacao negativo")
-    if cpu_time <= 0:
+    if cpu_time <= 0:                   # Processo precisa de tempo de CPU positivo
         raise ValueError(f"Linha {line_number}: tempo de processador deve ser positivo")
-    if frames <= 0:
+    if frames <= 0:                     # Processo precisa ocupar pelo menos um frame
         raise ValueError(f"Linha {line_number}: conjunto de trabalho deve ter ao menos 1 frame")
-    if min(printer, scanner, modem, sata) < 0:
+    if min(printer, scanner, modem, sata) < 0:  # Recursos solicitados não podem ser negativos
         raise ValueError(f"Linha {line_number}: requisicoes de recursos nao podem ser negativas")
 
+    # Define o limite de memória conforme o tipo do processo
     frame_limit = MemoryManager.RT_RESERVED if priority == 0 else MemoryManager.USER_RESERVED
-    if frames > frame_limit:
+    if frames > frame_limit:            # Impede processos de ultrapassarem a área reservada de memória
         process_type = "tempo real" if priority == 0 else "usuario"
         raise ValueError(
             f"Linha {line_number}: processo de {process_type} solicita {frames} frames, "
             f"mas o limite da area reservada e {frame_limit}"
         )
-
+   
+    # Processos de tempo real não utilizam dispositivos de E/S
     if priority == 0 and any((printer, scanner, modem, sata)):
         raise ValueError(f"Linha {line_number}: processo de tempo real nao pode requisitar E/S")
-
+    # Verifica se a quantidade de recursos solicitada existe no sistema
     if printer > ResourceManager.TOTAL_PRINTERS:
         raise ValueError(f"Linha {line_number}: requisicao de impressoras excede o total disponivel")
     if scanner > ResourceManager.TOTAL_SCANNERS:
@@ -79,25 +81,25 @@ def _validate_process_fields(
     if sata > ResourceManager.TOTAL_SATA:
         raise ValueError(f"Linha {line_number}: requisicao de SATA excede o total disponivel")
 
-
+## Lê o arquivo de processos e cria os objetos Process
 def parse_processes(path: Path) -> List[Process]:
-    """Lê processes.txt e retorna uma lista de objetos Process."""
     processes: List[Process] = []
     with path.open() as file:
-        pid = 0  # A sequência de PIDs começa em 0, de acordo com a especificação.
-        for line_number, line in enumerate(file, 1):
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            if len(processes) >= MAX_PROCESSES:
+        pid = 0  # A sequência de PIDs começa em 0, de acordo com a especificação
+        for line_number, line in enumerate(file, 1):    # Percorre cada linha do arquivo
+            line = line.strip()                         # Remove espaços e quebras de linha
+            if not line or line.startswith("#"):        # Ignora linhas vazias e comentários
+                continue    
+            if len(processes) >= MAX_PROCESSES:         # Limita quantidade de processos
                 raise ValueError(f"O arquivo de processos excede o limite de {MAX_PROCESSES} processos")
-            parts = [part.strip() for part in line.split(",")]
-            if len(parts) != 8:
+            parts = [part.strip() for part in line.split(",")]  # Divide os campos separados por vírgula
+            if len(parts) != 8:                         # Cada processo deve possuir 8 campos
                 raise ValueError(f"Linha {line_number}: processo deve conter 8 campos")
             try:
-                values = list(map(int, parts))
+                values = list(map(int, parts))          # Converte os valores para inteiro
             except ValueError as exc:
                 raise ValueError(f"Linha {line_number}: todos os campos do processo devem ser inteiros") from exc
+            # Separa os campos do processo
             (
                 arrival,
                 priority,
@@ -108,6 +110,7 @@ def parse_processes(path: Path) -> List[Process]:
                 modem,
                 sata,
             ) = values
+            # Confere se os valores são válidos
             _validate_process_fields(
                 line_number,
                 priority,
@@ -119,6 +122,7 @@ def parse_processes(path: Path) -> List[Process]:
                 modem,
                 sata,
             )
+            # Cria o processo e adiciona na lista
             processes.append(
                 _build_process(
                     pid,
@@ -132,33 +136,38 @@ def parse_processes(path: Path) -> List[Process]:
                     sata,
                 )
             )
-            pid += 1
+            pid += 1                                    # Próximo processo recebe próximo PID
 
-    return processes
+    return processes                                    # Retorna todos os processos criados
 
-
+## Lê o arquivo do sistema de arquivos
+## Retorna o estado inicial do disco e operações futuras
 def parse_files(path: Path) -> Tuple[FileSystem, List[Tuple[int, int, str, int]]]:
-    """Lê files.txt e retorna um objeto FileSystem e uma lista de operações."""
     with path.open() as file:
         lines = []
-        for line in file:
+        for line in file:                               # Remove linhas vazias e comentários
             stripped = line.strip()
             if stripped and not stripped.startswith("#"):
                 lines.append(stripped)
-    if len(lines) < 2:
+    if len(lines) < 2:                                  # Arquivo precisa ter cabeçalho
         raise ValueError("files.txt sem header!")
 
-    blocks = int(lines[0])
-    n_existing = int(lines[1])
+    blocks = int(lines[0])                              # Primeiro campo: quantidade de blocos do disco
+    n_existing = int(lines[1])                          # Segundo campo: quantidade de arquivos existentes
+    # Validação do disco
     if blocks <= 0:
         raise ValueError("Quantidade de blocos do disco deve ser positiva")
     if n_existing < 0:
         raise ValueError("Quantidade de segmentos ocupados nao pode ser negativa")
+    # Verifica se existem todos os arquivos declarados
     if len(lines) < n_existing + 2:
         raise ValueError("files.txt possui menos segmentos iniciais do que o declarado")
 
     idx = 2
+    # Guarda arquivos que já existem no disco
     existing: List[Tuple[str, int, int]] = []
+
+    # Lê arquivos iniciais
     for _ in range(n_existing):
         parts = list(map(str.strip, lines[idx].split(",")))
         if len(parts) != 3:
@@ -168,6 +177,7 @@ def parse_files(path: Path) -> Tuple[FileSystem, List[Tuple[int, int, str, int]]
         existing.append((name, start, size))
         idx += 1
 
+    # Cria sistema de arquivos e carrega arquivos existentes
     fs = FileSystem(blocks)
     fs.load_existing(existing)
 
@@ -199,9 +209,9 @@ def parse_files(path: Path) -> Tuple[FileSystem, List[Tuple[int, int, str, int]]
 
     return fs, operations
 
-
+## Lê o arquivo de strings de referência das páginas
+## Retorna uma lista de strings de referência por processo
 def parse_reference_strings(path: Path) -> List[List[int]]:
-    """Lê string.txt e retorna uma lista de strings de referência por processo."""
     references: List[List[int]] = []
     with path.open() as file:
         for line in file:
@@ -211,7 +221,7 @@ def parse_reference_strings(path: Path) -> List[List[int]]:
             references.append([int(part.strip()) for part in line.split(",") if part.strip()])
     return references
 
-
+## Formata uma sequência de blocos de disco para exibição
 def _format_block_range(start: int, size: int) -> str:
     blocks = list(range(start, start + size))
     if not blocks:
@@ -220,9 +230,8 @@ def _format_block_range(start: int, size: int) -> str:
         return str(blocks[0])
     return ", ".join(str(block) for block in blocks[:-1]) + f" e {blocks[-1]}"
 
-
+## Executa a parte de processos usando o scheduler real quando disponível
 def _drive_process_execution(processes: List[Process]) -> None:
-    """Executa a parte de processos usando o scheduler real quando disponível."""
     memory_manager = MemoryManager()
     resource_manager = ResourceManager()
     scheduler = Scheduler(memory_manager, resource_manager)
@@ -244,7 +253,7 @@ def _drive_process_execution(processes: List[Process]) -> None:
             break
         time += 1
 
-
+## Executa as operações do sistema de arquivos
 def _run_filesystem_operations(
     processes: List[Process],
     fs: FileSystem,
@@ -288,9 +297,8 @@ def _run_filesystem_operations(
             else:
                 print(f"    O processo {pid} não pode deletar o arquivo {filename} porque não é o proprietário.")
 
-
+## Executa a simulação do pseudo-SO na ordem esperada pela especificação
 def run_simulation(procs: Path, files: Path, strings: Optional[Path] = None) -> None:
-    """Executa a simulação do pseudo-SO na ordem esperada pela especificação."""
     strings = strings or Path("string.txt")
 
     processes = parse_processes(procs)
