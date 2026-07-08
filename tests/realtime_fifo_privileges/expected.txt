@@ -1,0 +1,59 @@
+dispatcher =>
+    PID: 0
+    frames: 3
+    priority: 0
+    time: 2
+    printers: 0
+    scanners: 0
+    modems: 0
+    drives: 0
+process 0 =>
+    P0 STARTED
+    P0 instruction 1
+    P0 instruction 2
+    P0 return SIGINT
+dispatcher =>
+    PID: 1
+    frames: 4
+    priority: 0
+    time: 1
+    printers: 0
+    scanners: 0
+    modems: 0
+    drives: 0
+process 1 =>
+    P1 STARTED
+    P1 instruction 1
+    P1 return SIGINT
+dispatcher =>
+    PID: 2
+    frames: 3
+    priority: 1
+    time: 2
+    printers: 0
+    scanners: 0
+    modems: 0
+    drives: 0
+process 2 =>
+    P2 STARTED
+    P2 instruction 1
+process 2 =>
+    P2 instruction 2
+    P2 return SIGINT
+Sistema de arquivos =>
+    Operação 1 => Falha
+    O processo 2 não pode deletar o arquivo A porque não é o proprietário.
+    Operação 2 => Sucesso
+    O processo 0 deletou o arquivo A.
+    Operação 3 => Sucesso
+    O processo 2 criou o arquivo C (blocos 0 e 1).
+    Operação 4 => Sucesso
+    O processo 1 deletou o arquivo C.
+    Operação 5 => Sucesso
+    O processo 2 criou o arquivo D (blocos 0, 1 e 2).
+Mapa de ocupação do disco:
+D | D | D | B | B | 0 | 0 | 0 |
+Número de Faltas de Páginas por processo:
+P0 = 2 faltas de páginas
+P1 = 1 faltas de páginas
+P2 = 4 faltas de páginas

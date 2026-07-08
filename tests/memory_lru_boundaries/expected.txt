@@ -1,0 +1,36 @@
+dispatcher =>
+    PID: 0
+    frames: 2
+    priority: 0
+    time: 1
+    printers: 0
+    scanners: 0
+    modems: 0
+    drives: 0
+process 0 =>
+    P0 STARTED
+    P0 instruction 1
+    P0 return SIGINT
+dispatcher =>
+    PID: 1
+    frames: 3
+    priority: 1
+    time: 1
+    printers: 0
+    scanners: 0
+    modems: 0
+    drives: 0
+process 1 =>
+    P1 STARTED
+    P1 instruction 1
+    P1 return SIGINT
+Sistema de arquivos =>
+    Operação 1 => Sucesso
+    O processo 0 criou o arquivo A (blocos 0).
+    Operação 2 => Sucesso
+    O processo 1 criou o arquivo B (blocos 1 e 2).
+Mapa de ocupação do disco:
+A | B | B | 0 | 0 |
+Número de Faltas de Páginas por processo:
+P0 = 2 faltas de páginas
+P1 = 3 faltas de páginas
