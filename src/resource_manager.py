@@ -1,42 +1,29 @@
-"""I/O resource management for exclusive device allocation."""
-
 from dataclasses import dataclass
 from typing import Tuple
 
 
 @dataclass
+## Representa a quantidade de dispositivos de E/S disponíveis
 class ResourceCounts:
-    """Tracks count of available I/O resources."""
+    printers: int = 0                               # Quantidade de impressoras disponíveis
+    scanners: int = 0                               # Quantidade de scanners disponíveis
+    modems: int = 0                                 # Quantidade de modems disponíveis
+    sata: int = 0                                   # Quantidade de dispositivos SATA disponíveis
 
-    printers: int = 0
-    scanners: int = 0
-    modems: int = 0
-    sata: int = 0
-
+    ## Retorna todos os contadores em formato de tupla
     def as_tuple(self) -> Tuple[int, int, int, int]:
-        """Convert to tuple format.
-
-        Returns:
-            Tuple of (printers, scanners, modems, sata) counts
-        """
         return self.printers, self.scanners, self.modems, self.sata
 
-
+## Classe responsável pelo gerenciamento dos recursos de E/S
 class ResourceManager:
-    """Manages exclusive allocation of I/O devices.
-
-    Tracks availability of system I/O resources and ensures exclusive access.
-    Real-time processes do not require I/O resources.
-    """
-
-    # System resource limits
-    TOTAL_PRINTERS = 2
+    # Quantidade total de dispositivos existentes no sistema
+    TOTAL_PRINTERS = 2 
     TOTAL_SCANNERS = 1
     TOTAL_MODEMS = 1
     TOTAL_SATA = 2
 
+    ## Inicializa o gerenciador de recursos com todos os recursos disnponíveis
     def __init__(self) -> None:
-        """Initialize resource manager with all devices available."""
         self.available = ResourceCounts(
             printers=self.TOTAL_PRINTERS,
             scanners=self.TOTAL_SCANNERS,
@@ -44,6 +31,7 @@ class ResourceManager:
             sata=self.TOTAL_SATA,
         )
 
+    ## Tenta alocar os dispositivos solicitados por um processo
     def allocate(
         self,
         printers: int,
@@ -51,21 +39,12 @@ class ResourceManager:
         modems: int,
         sata: int,
     ) -> bool:
-        """Attempt to allocate requested I/O devices.
 
-        Args:
-            printers: Number of printers requested
-            scanners: Number of scanners requested
-            modems: Number of modems requested
-            sata: Number of SATA devices requested
-
-        Returns:
-            True if all requested devices were allocated, False otherwise
-        """
+        # Verifica se algum valor solicitado é negativo
         if min(printers, scanners, modems, sata) < 0:
             return False
 
-        # Check if enough resources are available
+        # Verifica se existem recursos suficientes
         if (
             printers > self.available.printers
             or scanners > self.available.scanners
@@ -73,13 +52,15 @@ class ResourceManager:
             or sata > self.available.sata
         ):
             return False
-        # Allocate the resources
+        
+        # Com todos os recursos disponíveis, reserva cada dispositivo solicitado
         self.available.printers -= printers
         self.available.scanners -= scanners
         self.available.modems -= modems
         self.available.sata -= sata
-        return True
+        return True                                 # Indica que a alocação foi realizada
 
+    ## Libera os recursos utilizados por um processo
     def free(
         self,
         printers: int,
@@ -87,22 +68,17 @@ class ResourceManager:
         modems: int,
         sata: int,
     ) -> None:
-        """Release I/O devices back to available pool.
 
-        Args:
-            printers: Number of printers to release
-            scanners: Number of scanners to release
-            modems: Number of modems to release
-            sata: Number of SATA devices to release
-        """
-        if min(printers, scanners, modems, sata) < 0:
+        if min(printers, scanners, modems, sata) < 0:   # Não é permitido liberar uma quantidade negativa de dispositivos
             raise ValueError("Resource counts cannot be negative")
 
+        # Devolve cada recurso ao sistema
         self.available.printers += printers
         self.available.scanners += scanners
         self.available.modems += modems
         self.available.sata += sata
 
+        # Verifica se algum contador ultrapassou a quantidade total existente no sistema
         if (
             self.available.printers > self.TOTAL_PRINTERS
             or self.available.scanners > self.TOTAL_SCANNERS
@@ -111,8 +87,8 @@ class ResourceManager:
         ):
             raise RuntimeError("Resource pool exceeded total device count")
 
+    ## Define como o objeto será exibido ao utilizar print()
     def __str__(self) -> str:
-        """String representation showing available resource counts."""
         return (
             f"PRN={self.available.printers} SCN={self.available.scanners} "
             f"MDM={self.available.modems} SATA={self.available.sata}"
