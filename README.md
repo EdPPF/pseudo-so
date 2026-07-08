@@ -6,14 +6,23 @@ Uma implementação simples de um sistema operacional, escrita em Python, compos
 
 As partes que compões este projeto são descritas como:
 
-- **Gerenciador de Processos**: TODO;
-- **Gerenciador de Memória**: TODO;
+- **Gerenciador de Processos**: Responsável pela criação, admissão, escalonamento e finalização dos processos. Implementa filas multinível para processos de usuário, fila FIFO para processos de tempo real, quantum, preempção, aging e controle dos estados dos processos;
+- **Gerenciador de Memória**: Gerencia a alocação e liberação de memória para os processos, mantendo áreas reservadas para processos de tempo real e de usuário. Também simula paginação utilizando o algoritmo LRU para contabilização das faltas de página;
 - **Gerenciador de Recursos de E/S**: Alocação exclusiva de recursos para scanners, impressoras, modems e unidades SATA;
-- **File System**: TODO.
+- **File System**: Simula um sistema de arquivos baseado em blocos, permitindo carregar arquivos existentes, criar e remover arquivos, controlar proprietários e gerenciar o mapa de ocupação do disco.
 
 ## Features
 
-TODO
+- Escalonamento de processos por múltiplas filas de prioridade;
+- Fila FIFO exclusiva para processos de tempo real;
+- Quantum e preempção para processos de usuário;
+- Mecanismo de aging para evitar starvation;
+- Gerenciamento de memória com áreas reservadas para processos de tempo real e usuário;
+- Simulação de paginação utilizando o algoritmo LRU;
+- Contabilização de faltas de página por processo;
+- Gerenciamento exclusivo de recursos de E/S;
+- Simulação de sistema de arquivos com criação e remoção de arquivos;
+- Exibição do mapa final de ocupação do disco.
 
 ## Requerimentos
 
