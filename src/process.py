@@ -11,6 +11,7 @@ class ProcessState(Enum):
     RUNNING = auto()            # Processo em execução na CPU
     WAITING = auto()            # Processo bloqueado
     TERMINATED = auto()         # Processo finalizado
+    REJECTED = auto()           # Processo rejeitado por violar limites da especificação
 
 
 @dataclass
@@ -39,6 +40,8 @@ class Process:
     waited_time: int = field(init=False, default=0)                     # Tempo de espera nas filas de pronto (aging)
     instructions_executed: int = field(init=False, default=0)           # Quantidade de instruções executadas
     started: bool = field(init=False, default=False)                    # Indica se o processo já foi despachado pela primeira vez
+    rejection_reason: str | None = field(init=False, default=None)      # Motivo de rejeição do processo
+    admission_wait_reported: bool = field(init=False, default=False)    # Evita repetir avisos de espera na admissão
 
 
     def __post_init__(self) -> None:        # Inicializa os atributos calculados após a criação do processo

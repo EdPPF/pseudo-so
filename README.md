@@ -2,19 +2,6 @@
 
 Uma implementação simples de um sistema operacional, escrita em Python, composta por Gerenciador de Processos, Gerenciador de Memória, Gerenciador de E/S e Gerenciador de Arquivos.
 
-## Overview
-
-As partes que compões este projeto são descritas como:
-
-- **Gerenciador de Processos**: TODO;
-- **Gerenciador de Memória**: TODO;
-- **Gerenciador de Recursos de E/S**: Alocação exclusiva de recursos para scanners, impressoras, modems e unidades SATA;
-- **File System**: TODO.
-
-## Features
-
-TODO
-
 ## Requerimentos
 
 - Python 3.12 ou superior
@@ -94,7 +81,3 @@ Directory structure:
     │   └── simulation.py
     └── tests/
 ```
-
-## Formatos dos arquivos de entrada
-
-TODO

@@ -59,14 +59,6 @@ def _validate_process_fields(
     if min(printer, scanner, modem, sata) < 0:
         raise ValueError(f"Linha {line_number}: requisicoes de recursos nao podem ser negativas")
 
-    frame_limit = MemoryManager.RT_RESERVED if priority == 0 else MemoryManager.USER_RESERVED
-    if frames > frame_limit:
-        process_type = "tempo real" if priority == 0 else "usuario"
-        raise ValueError(
-            f"Linha {line_number}: processo de {process_type} solicita {frames} frames, "
-            f"mas o limite da area reservada e {frame_limit}"
-        )
-
     if priority == 0 and any((printer, scanner, modem, sata)):
         raise ValueError(f"Linha {line_number}: processo de tempo real nao pode requisitar E/S")
 
@@ -78,6 +70,18 @@ def _validate_process_fields(
         raise ValueError(f"Linha {line_number}: requisicao de modems excede o total disponivel")
     if sata > ResourceManager.TOTAL_SATA:
         raise ValueError(f"Linha {line_number}: requisicao de SATA excede o total disponivel")
+
+
+def _frame_limit_rejection_reason(line_number: int, priority: int, frames: int) -> Optional[str]:
+    frame_limit = MemoryManager.RT_RESERVED if priority == 0 else MemoryManager.USER_RESERVED
+    if frames <= frame_limit:
+        return None
+
+    process_type = "tempo real" if priority == 0 else "usuario"
+    return (
+        f"Linha {line_number}: processo de {process_type} solicita {frames} frames, "
+        f"mas o limite da area reservada e {frame_limit}"
+    )
 
 
 def parse_processes(path: Path) -> List[Process]:
@@ -119,19 +123,23 @@ def parse_processes(path: Path) -> List[Process]:
                 modem,
                 sata,
             )
-            processes.append(
-                _build_process(
-                    pid,
-                    arrival,
-                    priority,
-                    cpu_time,
-                    blocks,
-                    printer,
-                    scanner,
-                    modem,
-                    sata,
-                )
+            process = _build_process(
+                pid,
+                arrival,
+                priority,
+                cpu_time,
+                blocks,
+                printer,
+                scanner,
+                modem,
+                sata,
             )
+            rejection_reason = _frame_limit_rejection_reason(line_number, priority, blocks)
+            if rejection_reason is not None:
+                process.state = ProcessState.REJECTED
+                process.rejection_reason = rejection_reason
+
+            processes.append(process)
             pid += 1
 
     return processes
@@ -223,19 +231,27 @@ def _format_block_range(start: int, size: int) -> str:
 
 def _drive_process_execution(processes: List[Process]) -> None:
     """Executa a parte de processos usando o scheduler real quando disponível."""
+    runnable_processes = [
+        process for process in processes if process.state != ProcessState.REJECTED
+    ]
+    if not runnable_processes:
+        return
+
     memory_manager = MemoryManager()
     resource_manager = ResourceManager()
     scheduler = Scheduler(memory_manager, resource_manager)
     time = 0
 
     while True:
-        for process in [p for p in processes if p.arrival_time == time]:
+        for process in [p for p in runnable_processes if p.arrival_time == time]:
             scheduler.add_new_process(process)
 
         scheduler.tick()
-        finished = sum(1 for process in processes if process.state == ProcessState.TERMINATED)
+        finished = sum(
+            1 for process in runnable_processes if process.state == ProcessState.TERMINATED
+        )
         if (
-            finished == len(processes)
+            finished == len(runnable_processes)
             and not scheduler.admission
             and not scheduler.rt_queue
             and all(not queue for queue in scheduler.user_queues)
@@ -258,6 +274,10 @@ def _run_filesystem_operations(
         if process is None:
             print(f"    Operação {index} => Falha")
             print(f"    O processo {pid} não existe.")
+            continue
+        if process.state == ProcessState.REJECTED:
+            print(f"    Operação {index} => Falha")
+            print(f"    O processo {pid} foi rejeitado e não pode executar operações de arquivo.")
             continue
 
         if opcode == 0:
@@ -305,6 +325,14 @@ def run_simulation(procs: Path, files: Path, strings: Optional[Path] = None) -> 
     for process, sequence in zip(processes, reference_strings):
         process.reference_string = sequence
 
+    rejected_processes = [
+        process for process in processes if process.state == ProcessState.REJECTED
+    ]
+    if rejected_processes:
+        print("Processos rejeitados =>")
+        for process in rejected_processes:
+            print(f"    P{process.pid}: {process.rejection_reason}")
+
     # Escalonador processa o LRU na admissão
     _drive_process_execution(processes)
     # Roda operações do sistema de arquivos após encerramento da CPU
@@ -315,4 +343,7 @@ def run_simulation(procs: Path, files: Path, strings: Optional[Path] = None) -> 
 
     print("Número de Faltas de Páginas por processo:")
     for process in processes:
-        print(f"P{process.pid} = {process.page_faults} faltas de páginas")
+        if process.state == ProcessState.REJECTED:
+            print(f"P{process.pid} = processo rejeitado ({process.rejection_reason})")
+        else:
+            print(f"P{process.pid} = {process.page_faults} faltas de páginas")

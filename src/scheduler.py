@@ -30,35 +30,68 @@ class Scheduler:
         self.admission.append(proc)
 
 
-    def try_admit(self) -> None:                        # Tenta admitir os processos presentes na fila de admissão: se houver memória e recursos disponíveis, o processo é colocado na fila de prontos; caso contrário, permanece aguardando
-        pending = deque()                               # Nova fila contendo apenas os processos que continuarão esperando
-        while self.admission:                           # Percorre todos os processos da fila de admissão
-            proc = self.admission.popleft()             # Remove o primeiro processo da fila
-            if self._allocate_resources(proc):          # Tenta alocar memória e recursos
-                proc.state = ProcessState.READY         # Processo passa para o estado READY
-                self._enqueue_ready(proc)               # Coloca o processo na fila de prontos correspondente
-            else:
-                # Keep waiting for resources
-                pending.append(proc)                    # Não foi possível admitir, continua aguardando.
+    def try_admit(self) -> None:                        # Tenta admitir processos preservando FIFO por classe.
+        pending = deque()
+        blocked_rt = False
+        blocked_user = False
 
-        self.admission = pending                        # Atualiza a fila de admissão.
+        while self.admission:
+            proc = self.admission.popleft()
+            if (proc.is_real_time and blocked_rt) or (not proc.is_real_time and blocked_user):
+                pending.append(proc)
+                continue
+
+            failure_reason = self._allocate_resources(proc)
+            if failure_reason is not None:
+                proc.state = ProcessState.WAITING
+                if not proc.admission_wait_reported:
+                    print("admissao =>")
+                    print(
+                        f"    P{proc.pid} aguardando: {failure_reason}. "
+                        "Fila de admissao da classe preservada."
+                    )
+                    proc.admission_wait_reported = True
+                pending.append(proc)
+                if proc.is_real_time:
+                    blocked_rt = True
+                else:
+                    blocked_user = True
+                continue
+
+            proc.state = ProcessState.READY
+            if proc.admission_wait_reported:
+                print("admissao =>")
+                print(f"    P{proc.pid} admitido apos espera.")
+                proc.admission_wait_reported = False
+            self._enqueue_ready(proc)
+
+        self.admission = pending
 
 
-    def _allocate_resources(self, proc: Process) -> bool:   # Tenta alocar memória e recursos para um process
+    def _allocate_resources(self, proc: Process) -> Optional[str]:   # Tenta alocar memória e recursos para um processo.
         page_table = self.memory.admit_process(         # Solicita memória ao gerenciador de memória
             proc.pid, proc.is_real_time, proc.memory_blocks
         )
         if not page_table:                              # Se não houver memória suficiente, o processo não pode ser admitido
-            return False
+            if proc.is_real_time:
+                available = self.memory.rt_frames_free
+                area = "tempo real"
+            else:
+                available = self.memory.user_frames_free
+                area = "usuario"
+            return (
+                f"memoria insuficiente na area de {area} "
+                f"(solicitados {proc.memory_blocks} frames, disponiveis {available})"
+            )
         
         if not proc.is_real_time and not self.resources.allocate(   # Tenta reservar dispositivos de E/S para processo de usuário
             proc.printers, proc.scanners, proc.modems, proc.sata
         ):
             self.memory.release_process(proc.pid)        # Desfaz a alocação de memória caso não haja recursos disponíveis
-            return False
+            return "recursos de E/S indisponiveis"
         
         proc.page_faults = page_table.process_reference_string(proc.reference_string)   # Processa a string de referência utilizando o algoritmo LRU e armazena a quantidade de faltas de página
-        return True                                      # Processo admitido com sucesso
+        return None                                      # Processo admitido com sucesso
 
 
     def _enqueue_ready(self, proc: Process) -> None:    # Insere um processo na fila de prontos correspondente à sua prioridade
@@ -118,13 +151,13 @@ class Scheduler:
         if proc is None:                                # Caso nenhum processo esteja disponível, a CPU permanece ociosa
             return
         
-        ## Executa o processo durante um quantum de tempo
         if proc.is_real_time:  
             # Processos de tempo real não sofrem preempção                     
             proc.remaining_time -= 1
             proc.instructions_executed += 1
             print(f"    P{proc.pid} instruction {proc.instructions_executed}")
             finished = proc.remaining_time == 0  
+        ## Executa o processo durante um quantum de tempo
         else:
             # Processos de usuário executam apenas durante um quantum
             exec_time = min(TIME_QUANTUM, proc.remaining_time)
